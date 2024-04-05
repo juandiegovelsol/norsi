@@ -58,26 +58,83 @@ async function generarPortadaPDF(datos) {
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const titleFontSize = 14;
-  const page = pdfDoc.addPage();
-
-  // Añadir texto a la portada
-  const { width, height } = page.getSize();
   const fontSize = 12;
-  const y = height - 250;
 
-  // Centrar los datos en la página
-  const centrarTexto = (text, font, size) => {
-    const textWidth = font.widthOfTextAtSize(text, size);
-    return (width - textWidth) / 2;
-  };
+  // Añadir la primera página y obtener una referencia a ella
+  const page1 = pdfDoc.addPage();
+  const { width, height } = page1.getSize(); // Obtener el tamaño de la página
 
-  const drawTextF = (text, y1, font, fontSize) => {
-    page.drawText(text, {
-      x: centrarTexto(text, font, fontSize),
-      y: y - y1,
+  // Añadir la segunda página
+  const page2 = pdfDoc.addPage();
+
+  // Añadir texto e imágenes a la primera página
+  const drawTextF = async (text, y, x = 0, fontSize = 12, page = page1) => {
+    await page.drawText(text, {
+      x: x === 0 ? centrarTexto(text, font, fontSize) : x,
+      y,
       size: fontSize,
       font,
     });
+  };
+
+  const drawImageF = async (path, scale, y, page = page1, x1 = 0) => {
+    const buffer = await readFileAsync(path);
+    const image = await pdfDoc.embedPng(buffer);
+    const dims = image.scale(scale);
+    page.drawImage(image, {
+      x: x1 == 0 ? (width - dims.width) / 2 : x1,
+      y,
+      width: dims.width,
+      height: dims.height,
+    });
+  };
+
+  /* const drawBlackBox = async (x, y, width, height, page) => {
+    page.drawRectangle({
+      x,
+      y,
+      width,
+      height,
+      color: rgb(0, 0, 0),
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 0.01,
+    });
+  }; */
+  const drawBlackBox = (x, y, width, height, borderWidth, page) => {
+    // Dibujar los cuatro bordes del recuadro negro
+    page.drawLine({
+      start: { x, y },
+      end: { x: x + width, y },
+      thickness: borderWidth,
+      color: rgb(0, 0, 0),
+    });
+
+    page.drawLine({
+      start: { x, y: y + height },
+      end: { x: x + width, y: y + height },
+      thickness: borderWidth,
+      color: rgb(0, 0, 0),
+    });
+
+    page.drawLine({
+      start: { x, y },
+      end: { x, y: y + height },
+      thickness: borderWidth,
+      color: rgb(0, 0, 0),
+    });
+
+    page.drawLine({
+      start: { x: x + width, y },
+      end: { x: x + width, y: y + height },
+      thickness: borderWidth,
+      color: rgb(0, 0, 0),
+    });
+  };
+
+  // Función para centrar el texto en la página
+  const centrarTexto = (text, font, size) => {
+    const textWidth = font.widthOfTextAtSize(text, size);
+    return (width - textWidth) / 2;
   };
 
   const {
@@ -95,37 +152,53 @@ async function generarPortadaPDF(datos) {
     year,
   } = datos;
 
-  drawTextF(title, 0, font, titleFontSize);
-  drawTextF(info, 60, font, fontSize);
-  drawTextF(nit, 80, font, fontSize);
-  drawTextF(locality, 100, font, fontSize);
+  await drawTextF(title, height - 250);
+  await drawTextF(info, height - 310);
+  await drawTextF(nit, height - 330);
+  await drawTextF(locality, height - 350);
+  await drawImageF(logoPath, 0.35, height - 460);
+  await drawImageF(firmaPath, 0.3, height - 545);
+  await drawTextF(name, height - 610);
+  await drawTextF(role, height - 625);
+  await drawTextF(licence, height - 640);
+  await drawTextF(date, height - 655);
+  await drawTextF(state, height - 800, 0, titleFontSize, page1);
+  await drawTextF(year, height - 820, 0, titleFontSize, page1);
 
-  const logoBuffer = await readFileAsync(logoPath);
-  const logoImage = await pdfDoc.embedPng(logoBuffer);
-  const logoDims = logoImage.scale(0.35);
-  page.drawImage(logoImage, {
-    x: (width - logoDims.width) / 2,
-    y: y - 210,
-    width: logoDims.width,
-    height: logoDims.height,
-  });
+  // Añadir contenido a la segunda página
+  const y2 = height - 50;
 
-  const firmaBuffer = await readFileAsync(firmaPath);
-  const firmaImage = await pdfDoc.embedPng(firmaBuffer);
-  const firmaDims = firmaImage.scale(0.3);
-  page.drawImage(firmaImage, {
-    x: (width - firmaDims.width) / 2,
-    y: y - 295,
-    width: firmaDims.width,
-    height: firmaDims.height,
-  });
+  // Encerrar el logo del título en un recuadro negro
+  drawBlackBox(
+    (width - width * 0.35) / 2,
+    y2 - 50,
+    width * 0.35,
+    width * 0.35 * 0.2,
+    1,
+    page2
+  );
+  await drawImageF(logoPath, 0.2, y2 - 50, page2, 100);
 
-  drawTextF(name, 310, font, fontSize);
-  drawTextF(role, 325, font, fontSize);
-  drawTextF(licence, 340, font, fontSize);
-  drawTextF(date, 355, font, fontSize);
-  drawTextF(state, 500, font, titleFontSize);
-  drawTextF(year, 520, font, titleFontSize);
+  // Encerrar el texto del título en un recuadro negro
+  drawBlackBox(0, y2, width, titleFontSize * 2, 1, page2);
+  await drawTextF(title, y2, 0, titleFontSize, page2);
+
+  // Recuadros de texto en la segunda página
+  const textLines = ["Texto 1", "Texto 2", "Texto 3", "Texto 4", "Texto 5"];
+  const xRight = width - 150;
+  let yRight = y2;
+  drawBlackBox(
+    xRight - 5,
+    yRight - 5,
+    width - 2 * (xRight - 5),
+    fontSize + 10,
+    1,
+    page2
+  ); // Dibujar recuadro negro
+  for (const line of textLines) {
+    await drawTextF(line, yRight, xRight, fontSize, page2);
+    yRight -= 20;
+  }
 
   const pdfBytes = await pdfDoc.save();
   await writeFileAsync("portada.pdf", pdfBytes);
