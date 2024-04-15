@@ -53,7 +53,7 @@ export const pdfGenerate = async (req, res) => {
   }
 };
 
-async function generarPortadaPDF(datos) {
+const generarPortadaPDF = async (datos) => {
   // Crear un nuevo documento PDF
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -66,6 +66,7 @@ async function generarPortadaPDF(datos) {
 
   // Añadir la segunda página
   const page2 = pdfDoc.addPage();
+  const page3 = pdfDoc.addPage();
 
   // Añadir texto e imágenes a la primera página
   const drawTextF = (text, y, x = 0, fontSize = 12, page = page1) => {
@@ -124,6 +125,70 @@ async function generarPortadaPDF(datos) {
     });
   };
 
+  const insertHeader = async (page = page2) => {
+    // Añadir contenido a la segunda página
+    const y2 = height - 100;
+
+    drawBlackBox(width * 0.15, y2, width * 0.16, titleFontSize * 4, 1, page);
+    await drawImageF(logoPath, 0.15, y2 + 10, page, width * 0.15 + 4);
+
+    // Encerrar el texto del título en un recuadro negro
+    drawBlackBox(
+      width * 0.31,
+      y2 + titleFontSize * 1.3,
+      width * 0.39,
+      titleFontSize * 2.7,
+      1,
+      page
+    );
+    drawTextF(title, y2 + titleFontSize * 2.4, 0, titleFontSize * 0.7, page);
+
+    drawBlackBox(width * 0.31, y2, width * 0.13, titleFontSize * 1.3, 1, page);
+    drawTextF(
+      "GRUPO QUICK",
+      y2 + titleFontSize * 0.3,
+      width * 0.31 + 4,
+      titleFontSize * 0.7,
+      page
+    );
+
+    drawBlackBox(width * 0.44, y2, width * 0.13, titleFontSize * 1.3, 1, page);
+    drawTextF(
+      "SONO/030.22",
+      y2 + titleFontSize * 0.3,
+      width * 0.44 + 8,
+      titleFontSize * 0.7,
+      page
+    );
+
+    drawBlackBox(width * 0.57, y2, width * 0.13, titleFontSize * 1.3, 1, page);
+    drawTextF(
+      "PR-042-F1",
+      y2 + titleFontSize * 0.3,
+      width * 0.57 + 15,
+      titleFontSize * 0.7,
+      page
+    );
+
+    drawBlackBox(width * 0.7, y2, width * 0.18, titleFontSize * 4, 1, page);
+
+    // Recuadros de texto en la segunda página
+    const textLines = [
+      "Estudios de Higiene Ocupacional",
+      "Seguridad y Salud en el Trabajo-SSST",
+      "Sistemas Integrados de Gestión",
+      "Ingeniería",
+      "Comercialización",
+    ];
+    const xRight = width * 0.7 + 5;
+    let yRight = y2 + titleFontSize * 3;
+
+    for (const line of textLines) {
+      drawTextF(line, yRight, xRight, fontSize * 0.48, page);
+      yRight -= 9;
+    }
+  };
+
   // Función para centrar el texto en la página
   const centrarTexto = (text, font, size) => {
     const textWidth = font.widthOfTextAtSize(text, size);
@@ -155,71 +220,13 @@ async function generarPortadaPDF(datos) {
   drawTextF(role, height - 625);
   drawTextF(licence, height - 640);
   drawTextF(date, height - 655);
-  drawTextF(state, height - 800, 0, titleFontSize, page1);
-  drawTextF(year, height - 820, 0, titleFontSize, page1);
+  drawTextF(state, height - 760, 0, titleFontSize, page1);
+  drawTextF(year, height - 780, 0, titleFontSize, page1);
 
-  // Añadir contenido a la segunda página
-  const y2 = height - 100;
+  await insertHeader(page2);
 
-  drawBlackBox(width * 0.15, y2, width * 0.16, titleFontSize * 4, 1, page2);
-  await drawImageF(logoPath, 0.15, y2 + 10, page2, width * 0.15 + 4);
-
-  // Encerrar el texto del título en un recuadro negro
-  drawBlackBox(
-    width * 0.31,
-    y2 + titleFontSize * 1.3,
-    width * 0.39,
-    titleFontSize * 2.7,
-    1,
-    page2
-  );
-  drawTextF(title, y2 + titleFontSize * 2.4, 0, titleFontSize * 0.7, page2);
-
-  drawBlackBox(width * 0.31, y2, width * 0.13, titleFontSize * 1.3, 1, page2);
-  drawTextF(
-    "GRUPO QUICK",
-    y2 + titleFontSize * 0.3,
-    width * 0.31 + 4,
-    titleFontSize * 0.7,
-    page2
-  );
-
-  drawBlackBox(width * 0.44, y2, width * 0.13, titleFontSize * 1.3, 1, page2);
-  drawTextF(
-    "SONO/030.22",
-    y2 + titleFontSize * 0.3,
-    width * 0.44 + 8,
-    titleFontSize * 0.7,
-    page2
-  );
-
-  drawBlackBox(width * 0.57, y2, width * 0.13, titleFontSize * 1.3, 1, page2);
-  drawTextF(
-    "PR-042-F1",
-    y2 + titleFontSize * 0.3,
-    width * 0.57 + 15,
-    titleFontSize * 0.7,
-    page2
-  );
-
-  drawBlackBox(width * 0.7, y2, width * 0.18, titleFontSize * 4, 1, page2);
-
-  // Recuadros de texto en la segunda página
-  const textLines = [
-    "Estudios de Higiene Ocupacional",
-    "Seguridad y Salud en el Trabajo-SSST",
-    "Sistemas Integrados de Gestión",
-    "Ingeniería",
-    "Comercialización",
-  ];
-  const xRight = width * 0.7 + 5;
-  let yRight = y2 + titleFontSize * 3;
-
-  for (const line of textLines) {
-    drawTextF(line, yRight, xRight, fontSize * 0.48, page2);
-    yRight -= 9;
-  }
+  await insertHeader(page3);
 
   const pdfBytes = await pdfDoc.save();
   await writeFileAsync("portada.pdf", pdfBytes);
-}
+};
