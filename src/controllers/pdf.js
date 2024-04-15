@@ -189,6 +189,15 @@ const generarPortadaPDF = async (datos) => {
     }
   };
 
+  const insertFooter = (page) => {
+    const allPages = pdfDoc.getPages();
+    const pageIndex = allPages.indexOf(page);
+    const totalPages = allPages.length;
+
+    const footerText = `Página ${pageIndex + 1} de ${totalPages}`;
+    drawTextF(footerText, 40, 0, fontSize * 0.8, page);
+  };
+
   // Función para centrar el texto en la página
   const centrarTexto = (text, font, size) => {
     const textWidth = font.widthOfTextAtSize(text, size);
@@ -224,8 +233,10 @@ const generarPortadaPDF = async (datos) => {
   drawTextF(year, height - 780, 0, titleFontSize, page1);
 
   await insertHeader(page2);
+  insertFooter(page2);
 
   await insertHeader(page3);
+  insertFooter(page3);
 
   const pdfBytes = await pdfDoc.save();
   await writeFileAsync("portada.pdf", pdfBytes);
