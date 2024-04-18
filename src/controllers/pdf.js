@@ -47,6 +47,8 @@ export const pdfGenerate = async (req, res) => {
     datos.logoPath = "./src/resources/images/logo.png";
     datos.firmaPath = "./src/resources/images/firma.png";
     await generarPortadaPDF(datos);
+    const filePath = "./portada.pdf";
+    await createTableOfContents(filePath);
     res.status(200).json({ message: "Created pdf" });
   } catch (error) {
     console.log(error);
@@ -67,6 +69,7 @@ const generarPortadaPDF = async (datos) => {
   // Añadir la segunda página
   const page2 = pdfDoc.addPage();
   const page3 = pdfDoc.addPage();
+  const page4 = pdfDoc.addPage();
 
   // Añadir texto e imágenes a la primera página
   const drawTextF = (text, y, x = 0, fontSize = 12, page = page1) => {
@@ -238,6 +241,64 @@ const generarPortadaPDF = async (datos) => {
   await insertHeader(page3);
   insertFooter(page3);
 
+  drawTextF("Titulo 1", height - 100, 0, 14, page4);
+  drawTextF("Titulo 2", height - 120, 0, 14, page4);
+  drawTextF("Titulo 3", height - 140, 0, 14, page4);
+  drawTextF("Titulo 4", height - 160, 0, 14, page4);
+
   const pdfBytes = await pdfDoc.save();
   await writeFileAsync("portada.pdf", pdfBytes);
+};
+
+const createTableOfContents = async (pdfPath) => {
+  try {
+    //const pdfBytes = await readFileAsync(pdfPath);
+    const pdfDoc = await PDFDocument.load(await readFile(pdfPath));
+
+    const tableOfContents = [];
+    const headings = [];
+
+    const allPages = pdfDoc.getPages();
+
+    console.log(allPages);
+
+    for (let i = 0; i < allPages.length; i++) {
+      const page = allPages[i];
+      if (!page || typeof page.getTextContent !== "function") {
+        console.warn(
+          `La página ${i} no es válida o no tiene el método getTextContent()`
+        );
+        continue;
+      }
+      const { items } = await page.getTextContent();
+
+      for (const item of items) {
+        const text = item.str.trim();
+        const fontSize = item.transform[5];
+
+        if (fontSize >= 12) {
+          headings.push({ text, pageNumber: i + 1 });
+        }
+      }
+    }
+
+    for (let i = 0; i < headings.length; i++) {
+      const heading = headings[i];
+      tableOfContents.push(`${heading.text} - Página ${heading.pageNumber}`);
+    }
+
+    const tocContent = tableOfContents.join("\n");
+    const tocPage = pdfDoc.addPage();
+    tocPage.drawText(tocContent, {
+      x: 50,
+      y: tocPage.getHeight() - 50,
+    });
+
+    const modifiedPdfBytes = await pdfDoc.save();
+    await writeFileAsync("portada_tablacontenido.pdf", modifiedPdfBytes);
+
+    console.log("Tabla de contenido creada exitosamente");
+  } catch (error) {
+    console.error("Error al crear la tabla de contenido:", error);
+  }
 };
