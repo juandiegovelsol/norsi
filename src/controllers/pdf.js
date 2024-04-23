@@ -2,6 +2,9 @@ import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { readFile, writeFile } from "fs/promises";
 import fs from "fs";
 import { promisify } from "util";
+import { promises as fsPromises } from "fs";
+import * as pdfjsLib from "pdfjs-dist";
+import Pdfparser from "pdf2json";
 const readFileAsync = promisify(fs.readFile);
 const writeFileAsync = promisify(fs.writeFile);
 
@@ -27,13 +30,6 @@ const createPdf = async (input, output) => {
         console.log(text);
       }
     }
-    /* page.drawText("Nuevo texto", {
-      x: 5,
-      y: 5,
-      size: 50,
-      font: helveticaFont,
-      color: rgb(0.95, 0.1, 0.1),
-    }); */
     const pdfBytes = await pdfDoc.save();
     await writeFile(output, pdfBytes);
   } catch (error) {
@@ -251,6 +247,47 @@ const generarPortadaPDF = async (datos) => {
 };
 
 const createTableOfContents = async (pdfPath) => {
+  const loadLocalPDF = async (pdfPath) => {
+    return new Promise((resolve, reject) => {
+      try {
+        const pdfParser = new Pdfparser();
+
+        // Configurar eventos de la instancia del PDFParser
+        pdfParser.on("pdfParser_dataError", (errData) => {
+          reject("Error al analizar los datos del PDF:", errData.parserError);
+        });
+
+        pdfParser.on("pdfParser_dataReady", () => {
+          // Una vez que los datos del PDF estén listos, resolver la promesa con el objeto pdfParser
+          resolve(pdfParser);
+        });
+
+        // Cargar el PDF desde el archivo local
+        pdfParser.loadPDF(pdfPath);
+      } catch (error) {
+        reject("Error al cargar el PDF:", error);
+      }
+    });
+  };
+
+  // Función para cargar el PDF y manejar la promesa con async/await
+  const processPDF = async (pdfPath) => {
+    try {
+      //const pdfPath = "RUTA_DEL_PDF_LOCAL";
+      const pdfParser = await loadLocalPDF(pdfPath);
+      console.log(pdfParser);
+      // Aquí puedes acceder a los datos del PDF utilizando el objeto pdfParser
+      //console.log("Datos del PDF:", pdfParser.getRawTextContent());
+    } catch (error) {
+      // Manejo de errores
+      console.error("Error:", error);
+    }
+  };
+
+  processPDF(pdfPath);
+};
+
+/* const createTableOfContents = async (pdfPath) => {
   try {
     //const pdfBytes = await readFileAsync(pdfPath);
     const pdfDoc = await PDFDocument.load(await readFile(pdfPath));
@@ -270,7 +307,7 @@ const createTableOfContents = async (pdfPath) => {
         );
         continue;
       }
-      const { items } = await page.getTextContent();
+      const { items } = await page.getTextContent(); //AQUI ESTA EL ERROR, CONTINUAR AQUI
 
       for (const item of items) {
         const text = item.str.trim();
@@ -301,4 +338,4 @@ const createTableOfContents = async (pdfPath) => {
   } catch (error) {
     console.error("Error al crear la tabla de contenido:", error);
   }
-};
+}; */
